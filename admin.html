@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SARA-apk Admin Panel</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { padding-top: 70px; }
+    .dashboard-card { margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <div class="container">
+      <a class="navbar-brand" href="#">SARA-apk Admin</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNav" aria-controls="adminNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="adminNav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="index.html">View Public Site</a>
+          </li>
+        </ul>
+        <button id="loginBtn" class="btn btn-outline-light">Login with GitHub</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Container (hidden until login) -->
+  <div class="container mt-4" id="adminContent" style="display:none;">
+    <h1 class="mb-4">Dashboard</h1>
+    <!-- Dashboard Stats -->
+    <div class="row">
+      <div class="col-md-6 dashboard-card">
+        <div class="card">
+          <div class="card-header">Releases Overview</div>
+          <div class="card-body">
+            <canvas id="releasesChart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 dashboard-card">
+        <div class="card">
+          <div class="card-header">External Links Stats</div>
+          <div class="card-body">
+            <p>Total External Links: <span id="totalLinks">0</span></p>
+            <!-- Additional stats can be added here -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manage External Links -->
+    <h2 class="mt-4">Manage External Links</h2>
+    <form id="externalForm" class="mb-4">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <input type="text" class="form-control" id="linkTitle" placeholder="Title" required>
+        </div>
+        <div class="col-md-4">
+          <input type="url" class="form-control" id="linkURL" placeholder="URL" required>
+        </div>
+        <div class="col-md-4">
+          <input type="text" class="form-control" id="linkDescription" placeholder="Description">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary mt-3">Add Link</button>
+    </form>
+    <table class="table table-striped" id="linksTable">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>URL</th>
+          <th>Description</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- External links entries will appear here -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Placeholder OAuth & Dashboard Scripts -->
+  <script>
+    // Placeholder function for GitHub OAuth login.
+    // Replace this with an actual GitHub OAuth integration.
+    function githubOAuthLogin() {
+      // Simulate OAuth login success
+      setTimeout(() => {
+        document.getElementById('loginBtn').style.display = 'none';
+        document.getElementById('adminContent').style.display = 'block';
+        initDashboard();
+      }, 1000);
+    }
+
+    document.getElementById('loginBtn').addEventListener('click', githubOAuthLogin);
+
+    // Initialize the dashboard
+    function initDashboard() {
+      // Fetch GitHub releases to generate dummy chart data
+      fetch('https://api.github.com/repos/Craziedmaniac/SARA-apk/releases')
+        .then(response => response.json())
+        .then(data => {
+          const releaseNames = data.map(r => r.name);
+          const assetCounts = data.map(r => r.assets.length);
+          const ctx = document.getElementById('releasesChart').getContext('2d');
+          new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: releaseNames,
+              datasets: [{
+                label: '# of Assets',
+                data: assetCounts,
+                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+              }]
+            },
+            options: {
+              responsive: true,
+              scales: {
+                y: {
+                  beginAtZero: true
+                }
+              }
+            }
+          });
+        });
+
+      // Load external links from local storage or use default dummy data
+      let externalLinks = JSON.parse(localStorage.getItem('externalLinks')) || [
+        { title: "Example Link", url: "https://example.com", description: "Sample description" }
+      ];
+      updateLinksTable(externalLinks);
+    }
+
+    // Manage external links using local storage for this demo
+    function updateLinksTable(links) {
+      const tbody = document.querySelector('#linksTable tbody');
+      tbody.innerHTML = "";
+      document.getElementById('totalLinks').textContent = links.length;
+      links.forEach((link, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${link.title}</td>
+          <td><a href="${link.url}" target="_blank">${link.url}</a></td>
+          <td>${link.description}</td>
+          <td>
+            <button class="btn btn-sm btn-warning" onclick="editLink(${index})">Edit</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteLink(${index})">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+      // Save links in local storage
+      localStorage.setItem('externalLinks', JSON.stringify(links));
+    }
+
+    // Add new external link
+    document.getElementById('externalForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const title = document.getElementById('linkTitle').value;
+      const url = document.getElementById('linkURL').value;
+      const description = document.getElementById('linkDescription').value;
+      let externalLinks = JSON.parse(localStorage.getItem('externalLinks')) || [];
+      externalLinks.push({ title, url, description });
+      updateLinksTable(externalLinks);
+      this.reset();
+    });
+
+    // Edit external link
+    function editLink(index) {
+      let externalLinks = JSON.parse(localStorage.getItem('externalLinks')) || [];
+      const link = externalLinks[index];
+      const newTitle = prompt("Edit Title:", link.title);
+      const newURL = prompt("Edit URL:", link.url);
+      const newDesc = prompt("Edit Description:", link.description);
+      if(newTitle && newURL) {
+        externalLinks[index] = { title: newTitle, url: newURL, description: newDesc };
+        updateLinksTable(externalLinks);
+      }
+    }
+
+    // Delete external link
+    function deleteLink(index) {
+      let externalLinks = JSON.parse(localStorage.getItem('externalLinks')) || [];
+      if(confirm("Are you sure you want to delete this link?")) {
+        externalLinks.splice(index, 1);
+        updateLinksTable(externalLinks);
+      }
+    }
+  </script>
+  <!-- Bootstrap JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
